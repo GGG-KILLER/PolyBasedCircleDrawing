@@ -8,13 +8,13 @@ namespace PolyBasedCircleDrawing.Drawing
 {
     public static class ArcUtilities
     {
-        private const Single PI2 = ( Single ) ( Math.PI * 2d );
-        private const Single PIAbove180 = ( Single ) Math.PI / 180f;
-        private const Single PIUnder180 = 180f / ( Single ) Math.PI;
+        private const Double PI2 = Math.PI * 2;
+        private const Double PIAbove180 = Math.PI / 180;
+        private const Double PIUnder180 = 180 / Math.PI;
 
-        private static Single Deg2Rad ( Single deg ) => PIAbove180 * deg;
+        private static Double Deg2Rad ( Double deg ) => PIAbove180 * deg;
 
-        private static Single Rad2Deg ( Single rad ) => PIUnder180 * rad;
+        private static Double Rad2Deg ( Double rad ) => PIUnder180 * rad;
 
         /// <summary>
         /// Returns the incremental step in degrees
@@ -22,16 +22,16 @@ namespace PolyBasedCircleDrawing.Drawing
         /// <param name="r">The circle's radius</param>
         /// <param name="mlen">The maximum length in degrees</param>
         /// <returns></returns>
-        private static Single GetStepInDeg ( Single r, Single mlen = 1f ) =>
-            /*
-             * In degrees
-             * arc len = 2·π·r·(Θ/360)
-             * arc len = mlen
-             * ∴ mlen = 2·π·r·(Θ/360)
-             * mlen/(2·π·r) = Θ/360
-             * Θ = (360·mlen)/(2·π·r)
-             */
-            ( mlen * 360f ) / ( PI2 * r );
+        private static Double GetStepInDeg ( Double r, Double mlen = 1f ) =>
+             /*
+              * In degrees
+              * arc len = 2·π·r·(Θ/360)
+              * arc len = mlen
+              * ∴ mlen = 2·π·r·(Θ/360)
+              * mlen/(2·π·r) = Θ/360
+              * Θ = (360·mlen)/(2·π·r)
+              */
+             mlen * 360 / ( PI2 * r );
 
         /// <summary>
         /// Returns the incremental step in radians
@@ -39,7 +39,7 @@ namespace PolyBasedCircleDrawing.Drawing
         /// <param name="r">The circle's radius</param>
         /// <param name="mlen">The maximum length in radians</param>
         /// <returns></returns>
-        private static Single GetStepInRad ( Single r, Single mlen = 0.01f ) =>
+        private static Double GetStepInRad ( Double r, Double mlen = 0.01f ) =>
              /*
               * In radians
               * arc len = r·Θ
@@ -49,7 +49,7 @@ namespace PolyBasedCircleDrawing.Drawing
               */
              mlen / r;
 
-        public static PointF[] GetCircularArcVertices ( Point center, Single startingAngle, Single finalAngle, Single innerRadius, Single outerRadius, Single maxDistance = 1f )
+        public static PointF[] GetCircularArcVertices ( Point center, Double startingAngle, Double finalAngle, Double innerRadius, Double outerRadius, Double maxDistance = 1d )
         {
             if ( 0f > startingAngle || startingAngle > 360f )
                 throw new ArgumentOutOfRangeException ( nameof ( startingAngle ), "Angles must be values in the interval [0, 360]." );
@@ -64,31 +64,38 @@ namespace PolyBasedCircleDrawing.Drawing
             finalAngle = Deg2Rad ( finalAngle );
             maxDistance = Deg2Rad ( maxDistance );
 
-            var arclen = finalAngle - startingAngle;
-            var step = GetStepInRad ( outerRadius, maxDistance );
-            var points = new PointF[( Int32 ) Math.Floor ( arclen / step ) *  2];
-            var innerIdx = 0;
-            var outerIdx = points.Length - 1;
-            for ( var rad = startingAngle; rad <= finalAngle; rad += step )
+            var outerStep = GetStepInRad ( outerRadius, maxDistance );
+            var outerPoints = new List<PointF> ( );
+            for ( var outerRad = startingAngle; outerRad <= finalAngle; outerRad += outerStep )
             {
                 // cos == x, sin == y
-                var cos = ( Single ) Math.Cos ( rad );
-                var sin = -( Single ) Math.Sin ( rad );
+                var cos = Math.Cos ( outerRad );
+                var sin = -Math.Sin ( outerRad );
 
-                points[innerIdx++] = new PointF (
-                    center.X + cos * innerRadius,
-                    center.Y + sin * innerRadius
-                );
-                points[outerIdx--] = new PointF (
-                    center.X + cos * outerRadius,
-                    center.Y + sin * outerRadius
-                );
+                outerPoints.Add ( new PointF (
+                    ( Single ) ( center.X + cos * outerRadius ),
+                    ( Single ) ( center.Y + sin * outerRadius )
+                ) );
             }
 
-            return points;
+            var innerStep = GetStepInRad ( innerRadius, maxDistance );
+            var innerPoints = new List<PointF> ( );
+            for ( var innerRad = startingAngle; innerRad <= finalAngle; innerRad += innerStep )
+            {
+                var cos = Math.Cos ( innerRad );
+                var sin = -Math.Sin ( innerRad );
+
+                innerPoints.Add ( new PointF (
+                    ( Single ) ( center.X + cos * innerRadius ),
+                    ( Single ) ( center.Y + sin * innerRadius )
+                ) );
+            }
+
+            outerPoints.Reverse ( );
+            return innerPoints.Concat ( outerPoints ).ToArray ( );
         }
 
-        public static PointF[] GetCircularArcVerticesWithFixedStep ( Point center, Single startingAngle, Single finalAngle, Single innerRadius, Single outerRadius, Single step = 5f )
+        public static PointF[] GetCircularArcVerticesWithFixedStep ( Point center, Double startingAngle, Double finalAngle, Double innerRadius, Double outerRadius, Double step = 5f )
         {
             if ( 0f > startingAngle || startingAngle > 360f )
                 throw new ArgumentOutOfRangeException ( nameof ( startingAngle ), "Angles must be values in the interval [0, 360]." );
@@ -103,23 +110,23 @@ namespace PolyBasedCircleDrawing.Drawing
             finalAngle = Deg2Rad ( finalAngle );
             step = Deg2Rad ( step );
 
-            finalAngle = ( Single ) Math.Ceiling ( finalAngle / step ) * step;
+            finalAngle = Math.Ceiling ( finalAngle / step ) * step;
             var arclen = finalAngle - startingAngle;
-            var innerPoints = new List<PointF>();
-            var outerPoints = new List<PointF>();
+            var innerPoints = new List<PointF> ( );
+            var outerPoints = new List<PointF> ( );
             for ( var rad = startingAngle; rad <= finalAngle; rad += step )
             {
                 // cos == x, sin == y
-                var cos = ( Single ) Math.Cos ( rad );
-                var sin = -( Single ) Math.Sin ( rad );
+                var cos = Math.Cos ( rad );
+                var sin = -Math.Sin ( rad );
 
                 innerPoints.Add ( new PointF (
-                    center.X + cos * innerRadius,
-                    center.Y + sin * innerRadius
+                    ( Single ) ( center.X + cos * innerRadius ),
+                    ( Single ) ( center.Y + sin * innerRadius )
                 ) );
                 outerPoints.Add ( new PointF (
-                    center.X + cos * outerRadius,
-                    center.Y + sin * outerRadius
+                    ( Single ) ( center.X + cos * outerRadius ),
+                    ( Single ) ( center.Y + sin * outerRadius )
                 ) );
             }
 
