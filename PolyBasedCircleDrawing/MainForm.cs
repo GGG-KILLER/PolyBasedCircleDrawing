@@ -140,7 +140,8 @@ namespace PolyBasedCircleDrawing
                   this.ArcPropertiesInstance.MaxDistance
               );
             }
-            this.StatusString = $"SUCESS: Rebuilt arc in {Duration.Format ( sw.ElapsedTicks )}.";
+            sw.Stop ( );
+            this.StatusString = $"SUCESS: Rebuilt arc in {Duration.Format ( sw.ElapsedTicks )} with {this.Points.Length} vertices.";
             this.panelArc.Invalidate ( );
         }
     }
